@@ -978,14 +978,12 @@ del "$(TargetDir)bspguy.cfg_bak"</Command>
     <None Include="..\resources\languages\language_ru.ini" />
     <None Include="..\resources\languages\language_zh.ini" />
     <None Include="bspguy.ruleset" />
-    <None Include="cursor1.cur" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\src\sapien.ico" />
-    <Image Include="icon1.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
