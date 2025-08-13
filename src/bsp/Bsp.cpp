@@ -11878,7 +11878,7 @@ void Bsp::ExportToObjWIP(const std::string& path, int iscale, bool lightmapmode,
 		std::ofstream obj_file(path + bsp_name + ".obj", std::ios::binary);
 		if (obj_file)
 		{
-			obj_file << "# Exported using bspguy!\n";
+			obj_file << "# Exported using Sapien!\n";
 			obj_file << "mtllib " << bsp_name << ".mtl\n";
 
 			for (auto& group : group_list)

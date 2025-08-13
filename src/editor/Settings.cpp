@@ -3,7 +3,7 @@
 #include "Renderer.h"
 #include "log.h"
 
-std::string g_settings_path = "./bspguy.ini";
+std::string g_settings_path = "./Sapien.ini";
 std::string g_game_dir = "/";
 std::string g_working_dir = "./";
 std::string g_startup_dir = "";
@@ -28,7 +28,7 @@ void Settings::loadDefaultSettings()
 	maximized = false;
 	fontSize = 22.f;
 	gamedir = std::string();
-	workingdir = "./bspguy_work/";
+	workingdir = "./sapien_work/";
 
 	lastdir = "";
 	selected_lang = "EN";
@@ -82,7 +82,7 @@ void Settings::loadDefaultSettings()
 	reload_ents_list = true;
 	strip_wad_path = false;
 
-	palette_name = "quake_1";
+	palette_name = "half_life";
 
 	unsigned char default_data[0x300] = {
 	 0x00, 0x00, 0x00, 0x0F, 0x0F, 0x0F, 0x1F, 0x1F, 0x1F, 0x2F, 0x2F, 0x2F, 0x3F, 0x3F, 0x3F, 0x4B,
@@ -141,11 +141,11 @@ void Settings::loadDefaultSettings()
 	ResetBspLimits();
 
 	fgdPaths.clear();
-	fgdPaths.emplace_back("/moddir/GameDefinitionFile.fgd", true);
+	fgdPaths.emplace_back("../../ContentTest/zamnhlmp/fgd/aura.fgd", true);
 
 	resPaths.clear();
-	resPaths.emplace_back("/moddir/", true);
-	resPaths.emplace_back("/moddir_addon/", true);
+	resPaths.emplace_back("../../ContentTest/zamnhlmp/", true);
+	resPaths.emplace_back("../../ContentTest/zamnhlmp_addon/", true);
 
 	conditionalPointEntTriggers.clear();
 	conditionalPointEntTriggers.emplace_back("trigger_once");
@@ -325,7 +325,7 @@ void Settings::loadSettings()
 
 	fillPalettes("./palettes/");
 
-	palette_name = "quake_1";
+	palette_name = "half_life";
 
 	if (settings_ini->ParseError() != 0) {
 		print_log(PRINT_RED, "Can't load {}\n", g_settings_path);
@@ -565,19 +565,19 @@ void Settings::loadSettings()
 	// Restore default window height if invalid.
 	if (windowHeight <= 100 || windowWidth <= 100)
 	{
-		windowHeight = 600;
-		windowWidth = 800;
+		windowHeight = 1280;
+		windowWidth = 720;
 	}
 
 	if (default_is_empty && fgdPaths.empty())
 	{
-		fgdPaths.emplace_back("/moddir/GameDefinitionFile.fgd", true);
+		fgdPaths.emplace_back("../../ContentTest/zamnhlmp/fgd/aura.fgd", true);
 	}
 
 	if (default_is_empty && resPaths.empty())
 	{
-		resPaths.emplace_back("/moddir/", true);
-		resPaths.emplace_back("/moddir_addon/", true);
+		resPaths.emplace_back("../../ContentTest/zamnhlmp/", true);
+		resPaths.emplace_back("../../ContentTest/zamnhlmp_addon/", true);
 	}
 
 	if (default_is_empty)

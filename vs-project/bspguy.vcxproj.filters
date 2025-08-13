@@ -387,6 +387,7 @@
     <ClInclude Include=".\..\ascript\add_on\scriptmath\scriptmathcomplex.h">
       <Filter>Header Files\util\lib\as</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">
@@ -482,5 +483,13 @@
       <Filter>Langs</Filter>
     </None>
     <None Include="bspguy.ruleset" />
+    <None Include="cursor1.cur" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resource.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="icon1.ico" />
+    <Image Include="..\src\sapien.ico" />
   </ItemGroup>
 </Project>

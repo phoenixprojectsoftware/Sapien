@@ -24,7 +24,7 @@
 // Notes: (newbspguy):
 // ...
 
-std::string g_version_string = "NewBSPGuy v4.50";
+std::string g_version_string = "Sapien v1.0";
 
 
 #ifdef WIN32
@@ -552,8 +552,8 @@ void print_help(const std::string& command)
 		print_log(PRINT_RED | PRINT_GREEN | PRINT_INTENSITY, "{}",
 			"merge - Merges two or more maps together\n\n"
 
-			"Usage:   bspguy merge <mapname> -maps \"map1, map2, ... mapN\" [options]\n"
-			"Example: bspguy merge merged.bsp -maps \"svencoop1, svencoop2\"\n"
+			"Usage:   Sapien merge <mapname> -maps \"map1, map2, ... mapN\" [options]\n"
+			"Example: Sapien merge merged.bsp -maps \"svencoop1, svencoop2\"\n"
 
 			"\n[Options]\n"
 			"  -optimize    : Deletes unused model hulls before merging.\n"
@@ -566,7 +566,7 @@ void print_help(const std::string& command)
 			"                 Level changes and other things are updated so that the merged\n"
 			"                 maps can be played one after another. This flag prevents any\n"
 			"                 entity edits from being made (except for origins).\n"
-			"  -noscript    : By default, the output map is expected to run with the bspguy\n"
+			"  -noscript    : By default, the output map is expected to run with the Sapien\n"
 			"                 map script loaded, which ensures only entities for the current\n"
 			"                 map section are active. This flag replaces that script with less\n"
 			"                 effective entity logic. This may cause lag in maps with lots of\n"
@@ -582,8 +582,8 @@ void print_help(const std::string& command)
 		print_log(PRINT_RED | PRINT_GREEN | PRINT_INTENSITY, "{}",
 			"info - Show BSP data summary\n\n"
 
-			"Usage:   bspguy info <mapname> [options]\n"
-			"Example: bspguy info svencoop1.bsp -limit clipnodes -all\n"
+			"Usage:   Sapien info <mapname> [options]\n"
+			"Example: Sapien info svencoop1.bsp -limit clipnodes -all\n"
 
 			"\n[Options]\n"
 			"  -limit <name> : List the models contributing most to the named limit.\n"
@@ -596,8 +596,8 @@ void print_help(const std::string& command)
 		print_log(PRINT_RED | PRINT_GREEN | PRINT_INTENSITY, "{}",
 			"noclip - Delete some clipnodes from the BSP\n\n"
 
-			"Usage:   bspguy noclip <mapname> [options]\n"
-			"Example: bspguy noclip svencoop1.bsp -hull 2\n"
+			"Usage:   Sapien noclip <mapname> [options]\n"
+			"Example: Sapien noclip svencoop1.bsp -hull 2\n"
 
 			"\n[Options]\n"
 			"  -model #    : Model to strip collision from. By default, all models are stripped.\n"
@@ -618,8 +618,8 @@ void print_help(const std::string& command)
 		print_log(PRINT_RED | PRINT_GREEN | PRINT_INTENSITY, "{}",
 			"simplify - Replaces model hulls with a simple bounding box\n\n"
 
-			"Usage:   bspguy simplify <mapname> [options]\n"
-			"Example: bspguy simplify svencoop1.bsp -model 3\n"
+			"Usage:   Sapien simplify <mapname> [options]\n"
+			"Example: Sapien simplify svencoop1.bsp -model 3\n"
 
 			"\n[Options]\n"
 			"  -model #    : Model to simplify. Required.\n"
@@ -635,8 +635,8 @@ void print_help(const std::string& command)
 		print_log(PRINT_RED | PRINT_GREEN | PRINT_INTENSITY, "{}",
 			"delete - Delete BSP models.\n\n"
 
-			"Usage:   bspguy delete <mapname> [options]\n"
-			"Example: bspguy delete svencoop1.bsp -model 3\n"
+			"Usage:   Sapien delete <mapname> [options]\n"
+			"Example: Sapien delete svencoop1.bsp -model 3\n"
 
 			"\n[Options]\n"
 			"  -model #  : Model to delete. Entities that reference the deleted\n"
@@ -649,8 +649,8 @@ void print_help(const std::string& command)
 		print_log(PRINT_RED | PRINT_GREEN | PRINT_INTENSITY, "{}",
 			"transform - Apply 3D transformations\n\n"
 
-			"Usage:   bspguy transform <mapname> [options]\n"
-			"Example: bspguy transform svencoop1.bsp -move \"0,0,1024\"\n"
+			"Usage:   Sapien transform <mapname> [options]\n"
+			"Example: Sapien transform svencoop1.bsp -move \"0,0,1024\"\n"
 
 			"\n[Options]\n"
 			"  -move \"X,Y,Z\" : Units to move the map on each axis.\n"
@@ -662,8 +662,8 @@ void print_help(const std::string& command)
 		print_log(PRINT_RED | PRINT_GREEN | PRINT_INTENSITY, "{}",
 			"unembed - Deletes embedded texture data, so that they reference WADs instead.\n\n"
 
-			"Usage:   bspguy unembed <mapname>\n"
-			"Example: bspguy unembed c1a0.bsp\n"
+			"Usage:   Sapien unembed <mapname>\n"
+			"Example: Sapien unembed c1a0.bsp\n"
 			"\n[Options]\n"
 			"  -o <file>     : Output file. By default, <mapname> is overwritten.\n"
 		);
@@ -673,8 +673,8 @@ void print_help(const std::string& command)
 		print_log(PRINT_RED | PRINT_GREEN | PRINT_INTENSITY, "{}",
 			"exportobj - Export bsp geometry to obj [WIP].\n\n"
 
-			"Usage:   bspguy exportobj -scale \"-16\" <mapname>\n"
-			"Example: bspguy exportobj c1a0.bsp\n"
+			"Usage:   Sapien exportobj -scale \"-16\" <mapname>\n"
+			"Example: Sapien exportobj c1a0.bsp\n"
 		);
 	}
 	else if (command == "exportlit")
@@ -682,8 +682,8 @@ void print_help(const std::string& command)
 		print_log(PRINT_RED | PRINT_GREEN | PRINT_INTENSITY, "{}",
 			"exportlit   : Export .lit (Quake) lightdata file.\n\n"
 
-			"Usage:   bspguy exportlit <mapname>\n"
-			"Example: bspguy exportlit c1a0.bsp\n"
+			"Usage:   Sapien exportlit <mapname>\n"
+			"Example: Sapien exportlit c1a0.bsp\n"
 			"\n[Options]\n"
 			"  -o <file>     : Output file. By default, <mapname> is overwritten.\n"
 		);
@@ -693,8 +693,8 @@ void print_help(const std::string& command)
 		print_log(PRINT_RED | PRINT_GREEN | PRINT_INTENSITY, "{}",
 			"exportrad   : Export RAD.exe .ext & .wa_ files.\n\n"
 
-			"Usage:   bspguy exportrad <mapname>\n"
-			"Example: bspguy exportrad c1a0.bsp\n"
+			"Usage:   Sapien exportrad <mapname>\n"
+			"Example: Sapien exportrad c1a0.bsp\n"
 			"\n[Options]\n"
 			"  -o <file>     : Output file. By default, <mapname> is overwritten.\n"
 		);
@@ -704,8 +704,8 @@ void print_help(const std::string& command)
 		print_log(PRINT_RED | PRINT_GREEN | PRINT_INTENSITY, "{}",
 			"exportwad   : Export all map textures to .wad file.\n\n"
 
-			"Usage:   bspguy exportwad <mapname>\n"
-			"Example: bspguy exportwad c1a0.bsp\n"
+			"Usage:   Sapien exportwad <mapname>\n"
+			"Example: Sapien exportwad c1a0.bsp\n"
 			"\n[Options]\n"
 			"  -o <file>     : Output file. By default, <mapname> is overwritten.\n"
 		);
@@ -715,8 +715,8 @@ void print_help(const std::string& command)
 		print_log(PRINT_RED | PRINT_GREEN | PRINT_INTENSITY, "{}",
 			"importwad   : Import all .wad textures to map.\n\n"
 
-			"Usage:   bspguy importwad <mapname>\n"
-			"Example: bspguy importwad c1a0.bsp\n"
+			"Usage:   Sapien importwad <mapname>\n"
+			"Example: Sapien importwad c1a0.bsp\n"
 			"\n[Options]\n"
 			"  -i <file>     : Input file. By default, <mapname> is overwritten.\n"
 			"  -o <file>     : Output file. By default, <mapname> is overwritten.\n"
@@ -727,8 +727,8 @@ void print_help(const std::string& command)
 		print_log(PRINT_RED | PRINT_GREEN | PRINT_INTENSITY, "{}",
 			"screenshot   : Create screenshot and close map.\n\n"
 
-			"Usage:   bspguy screenshot <mapname> [options]\n"
-			"Example: bspguy screenshot c1a0.bsp -count 5 -w 256 -h 256\n"
+			"Usage:   Sapien screenshot <mapname> [options]\n"
+			"Example: Sapien screenshot c1a0.bsp -count 5 -w 256 -h 256\n"
 			"\n[Options]\n"
 			"  -count <num>   : Screenshots number.\n"
 			"  -w <width>   : Screenshot width.\n"
@@ -741,8 +741,8 @@ void print_help(const std::string& command)
 		print_log(PRINT_RED | PRINT_GREEN | PRINT_INTENSITY, "{}",
 			"importlit   : Import .lit (Quake) lightdata file to map.\n\n"
 
-			"Usage:   bspguy importlit <mapname>\n"
-			"Example: bspguy importlit c1a0.bsp\n"
+			"Usage:   Sapien importlit <mapname>\n"
+			"Example: Sapien importlit c1a0.bsp\n"
 			"\n[Options]\n"
 			"  -i <file>     : Input file. By default, <mapname> is overwritten.\n"
 			"  -o <file>     : Output file. By default, <mapname> is overwritten.\n"
@@ -753,8 +753,8 @@ void print_help(const std::string& command)
 		print_log(PRINT_RED | PRINT_GREEN | PRINT_INTENSITY, "{}",
 			"cullfaces - Remove leaf faces from map.\n\n"
 
-			"Usage:   bspguy cullfaces -leaf \"0\" <mapname>\n"
-			"Example: bspguy cullfaces c1a0.bsp - clean solid outside faces\n"
+			"Usage:   Sapien cullfaces -leaf \"0\" <mapname>\n"
+			"Example: Sapien cullfaces c1a0.bsp - clean solid outside faces\n"
 			"\n[Options]\n"
 			"  -o <file>     : Output file. By default, <mapname> is overwritten.\n"
 		);
@@ -764,7 +764,7 @@ void print_help(const std::string& command)
 		print_log(PRINT_RED | PRINT_INTENSITY, "{}\n\n", g_version_string);
 		print_log(PRINT_RED | PRINT_GREEN | PRINT_INTENSITY, "{}",
 			std::string("This tool modifies Sven Co-op BSPs without having to decompile them.\n\n"
-			"Usage: bspguy <command> <mapname> [options]\n"
+			"Usage: Sapien <command> <mapname> [options]\n"
 
 			"\n<Commands>\n"
 			"  info        : Show BSP data summary\n"
@@ -784,11 +784,11 @@ void print_help(const std::string& command)
 			"  screenshot  : Create screenshots and close map.\n"
 			" "
 			" "
-			"  no command  : Open empty bspguy window\n"
+			"  no command  : Open empty Sapien window\n"
 
-			"\nRun 'bspguy <command> help' to read about a specific command.\n"
+			"\nRun 'Sapien <command> help' to read about a specific command.\n"
 			"\nTo launch the 3D editor. Drag and drop a .bsp file onto the executable,\n"
-			"or run 'bspguy <mapname>'")
+			"or run 'Sapien <mapname>'")
 		);
 	}
 	FlushConsoleLog(true);
@@ -826,7 +826,7 @@ void make_minidump(EXCEPTION_POINTERS* e)
 	SYSTEMTIME t;
 	GetSystemTime(&t);
 	createDir("./crashes");
-	std::string name = fmt::format("./crashes/{}_{:04}{:02}{:02}_{:02}{:02}{:02}{:02}.dmp", "bspguy", t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond, crashdumps);
+	std::string name = fmt::format("./crashes/{}_{:04}{:02}{:02}_{:02}{:02}{:02}{:02}.dmp", "Sapien", t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond, crashdumps);
 
 
 	print_log(PRINT_RED | PRINT_INTENSITY, get_localized_string(LANG_0030), name);
@@ -1233,7 +1233,7 @@ int main(int argc, char* argv[])
 			if (g_cmdLine.bspfile.size() == 0)
 				print_log("{}\n", get_localized_string(LANG_0032));
 			else
-				print_log("{}\n", ("Start bspguy editor with: " + g_cmdLine.bspfile));
+				print_log("{}\n", ("Start Sapien editor with: " + g_cmdLine.bspfile));
 
 			print_log(get_localized_string(LANG_0033), g_settings_path);
 

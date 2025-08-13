@@ -16,6 +16,8 @@
 #include "LeafNavMesh.h"
 #include "Settings.h"
 
+#include "stb_image.h"
+
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
@@ -195,7 +197,7 @@ Renderer::Renderer()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, 0);
 
-	window = glfwCreateWindow(g_settings.windowWidth, g_settings.windowHeight, "bspguy", NULL, NULL);
+	window = glfwCreateWindow(g_settings.windowWidth, g_settings.windowHeight, "Sapien", NULL, NULL);
 
 	glfwSetWindowPos(window, g_settings.windowX, g_settings.windowY);
 
@@ -212,6 +214,19 @@ Renderer::Renderer()
 		print_log(get_localized_string(LANG_0903));
 		FlushConsoleLog(true);
 		return;
+	}
+
+	GLFWimage images[1];
+	images[0].pixels = stbi_load("icon.png", &images[0].width, &images[0].height, 0, 4); // RGBA
+	if (images[0].pixels)
+	{
+		glfwSetWindowIcon(window, 1, images);
+		print_log("[WINDOW] Window icon set\n");
+		stbi_image_free(images[0].pixels);
+	}
+	else
+	{
+		print_log("Failed to load icon.png for window icon\n");
 	}
 
 	glfwMakeContextCurrent(window);
@@ -392,11 +407,11 @@ void Renderer::updateWindowTitle(double _curTime)
 			if (g_progress.progress_total > 0)
 			{
 				float percent = (g_progress.progress / (float)g_progress.progress_total) * 100.0f;
-				glfwSetWindowTitle(window, fmt::format("bspguy [fps {:>4}] - [{} = {:.0f}%]", current_fps, g_progress.progress_title, percent).c_str());
+				glfwSetWindowTitle(window, fmt::format("Sapien [fps {:>4}] - [{} = {:.0f}%]", current_fps, g_progress.progress_title, percent).c_str());
 			}
 			else
 			{
-				glfwSetWindowTitle(window, fmt::format("bspguy [fps {:>4}] - {}", current_fps, g_limits.engineName + "-" + smallPath).c_str());
+				glfwSetWindowTitle(window, fmt::format("Sapien [fps {:>4}] - {}", current_fps, g_limits.engineName + "-" + smallPath).c_str());
 			}
 		}
 	}

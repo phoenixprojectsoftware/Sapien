@@ -4,7 +4,7 @@ set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(USE_MSVC_RUNTIME_LIBRARY_DLL OFF CACHE BOOL "" FORCE)
-project(bspguy LANGUAGES C CXX)
+project(Sapien LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
@@ -170,5 +170,5 @@ if(NOT MSVC)
 	-Wno-format -Wno-ignored-attributes -Wno-strict-aliasing -fno-plt -fno-devirtualize -Wno-unused-local-typedefs\
 	-Wno-unused-but-set-variable -Wno-stringop-truncation -Wno-format-truncation -Wno-class-memaccess")
 else()
-	message(FATAL_ERROR "Use vs-project/bspguy.sln for Visual Studio")
+	message(FATAL_ERROR "Use vs-project/Sapien.sln for Visual Studio")
 endif()
