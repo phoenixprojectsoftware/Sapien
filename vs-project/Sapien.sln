@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.1.31911.260
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bspguy", "bspguy.vcxproj", "{B66A4AE9-1BB7-3A0F-89E2-535DB5F7A262}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Sapien", "bspguy.vcxproj", "{B66A4AE9-1BB7-3A0F-89E2-535DB5F7A262}"
 	ProjectSection(ProjectDependencies) = postProject
 		{39E6AF97-6BA3-4A72-8C61-BCEBF214EBFD} = {39E6AF97-6BA3-4A72-8C61-BCEBF214EBFD}
 		{94C10DCA-6ED7-3AC5-87DF-14B22017E799} = {94C10DCA-6ED7-3AC5-87DF-14B22017E799}

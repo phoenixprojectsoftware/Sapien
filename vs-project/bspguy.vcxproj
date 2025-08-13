@@ -130,7 +130,7 @@
     <OutDir Condition="'$(Configuration)|$(Platform)'=='ReleaseXPx86|x64'">.\..\vs-project\Release\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">bspguy.dir\Release\</IntDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='ReleaseXPx86|x64'">bspguy.dir\Release\</IntDir>
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">bspguy</TargetName>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Sapien</TargetName>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Sapien</TargetName>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='ReleaseXPx86|x64'">bspguy</TargetName>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='ReleaseXPx86|Win32'">Sapien_winxp</TargetName>
