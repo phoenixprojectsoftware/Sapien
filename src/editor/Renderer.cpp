@@ -416,6 +416,7 @@ void Renderer::updateWindowTitle(double _curTime)
 			else
 			{
 				glfwSetWindowTitle(window, fmt::format("Sapien [fps {:>4}] - {}", current_fps, g_limits.engineName + "-" + smallPath).c_str());
+				glfwSetWindowTitle(window, fmt::format("Sapien [fps {:>4}] - {}", current_fps, "PROJECT: " + smallPath).c_str());
 			}
 		}
 	}
