@@ -240,19 +240,62 @@ void KothEditor::Controls()
 	if (!m_renderer || !m_renderer->canControl)
 		return;
 
-	if (m_renderer->curLeftMouse == GLFW_PRESS && m_renderer->oldLeftMouse != GLFW_PRESS)
+	const bool ctrlDown =
+		m_renderer->pressed[GLFW_KEY_LEFT_CONTROL] ||
+		m_renderer->pressed[GLFW_KEY_RIGHT_CONTROL];
+
+	const bool lmbPressed =
+		m_renderer->curLeftMouse == GLFW_PRESS &&
+		m_renderer->oldLeftMouse != GLFW_PRESS;
+
+	const bool lmbHeld =
+		m_renderer->curLeftMouse == GLFW_PRESS;
+
+	const bool lmbReleased =
+		m_renderer->curLeftMouse != GLFW_PRESS &&
+		m_renderer->oldLeftMouse == GLFW_PRESS;
+
+	if (ctrlDown && lmbPressed)
+	{
+		BeginDrawZone();
+		return;
+	}
+
+	if (m_isDrawingZone && lmbHeld)
+	{
+		UpdateDrawZone();
+		return;
+	}
+
+	if (m_isDrawingZone && lmbReleased)
+	{
+		FinishDrawZone();
+		return;
+	}
+
+	if (m_renderer->pressed[GLFW_KEY_ESCAPE] && !m_renderer->oldPressed[GLFW_KEY_ESCAPE])
+	{
+		CancelDrawZone();
+		return;
+	}
+
+	// Normal click select, but only when not holding Ctrl.
+	if (!ctrlDown && lmbPressed)
 	{
 		SelectZoneUnderCursor();
+		return;
 	}
 
 	if (m_renderer->pressed[GLFW_KEY_N] && !m_renderer->oldPressed[GLFW_KEY_N])
 	{
 		AddZoneAtCamera();
+		return;
 	}
 
 	if (m_renderer->pressed[GLFW_KEY_DELETE] && !m_renderer->oldPressed[GLFW_KEY_DELETE])
 	{
 		DeleteSelectedZone();
+		return;
 	}
 }
 
@@ -275,6 +318,18 @@ void KothEditor::Draw3D()
 			: COLOR4(0, 180, 255, 48);
 
 		m_renderer->drawBox(m_zones[i].mins, m_zones[i].maxs, fill);
+	}
+
+	if (m_isDrawingZone)
+	{
+		KothZone preview = MakeDrawPreviewZone();
+		NormalizeZone(preview);
+
+		m_renderer->drawBox(
+			preview.mins,
+			preview.maxs,
+			COLOR4(0, 255, 120, 80)
+		);
 	}
 
 	glEnable(GL_CULL_FACE);
@@ -315,6 +370,7 @@ void KothEditor::DrawGui()
 
 	ImGui::Separator();
 
+	ImGui::DragFloat("DRAW HEIGHT", &m_drawHeight, 1.0f, 8.0f, 2048.0f);
 	ImGui::InputText("New zone name", m_newZoneName, sizeof(m_newZoneName));
 	ImGui::DragFloat3("New zone size", &m_newZoneSize.x, 1.0f, 1.0f, 8192.0f);
 
@@ -371,9 +427,112 @@ void KothEditor::DrawGui()
 
 	ImGui::Separator();
 	ImGui::TextUnformatted("Controls:");
+	ImGui::TextUnformatted("Ctrl + LMB drag: draw new zone");
 	ImGui::TextUnformatted("LMB: select zone");
 	ImGui::TextUnformatted("N: add zone in front of camera");
 	ImGui::TextUnformatted("Delete: delete selected zone");
+	ImGui::TextUnformatted("Escape: cancel drawing");
 
 	ImGui::End();
+}
+
+bool KothEditor::TraceCursorToWorld(vec3& outPos)
+{
+	if (!m_renderer)
+		return false;
+
+	Bsp* map = m_renderer->getSelectedMap();
+
+	if (!map || !map->bsp_valid || !map->getBspRender())
+		return false;
+
+	vec3 start;
+	vec3 dir;
+	m_renderer->getPickRay(start, dir);
+
+	PickInfo pickInfo;
+	pickInfo.bestDist = g_limits.fltMaxCoord * 2.0f + 1.0f;
+
+	Bsp* pickedMap = map;
+
+	if (!map->getBspRender()->pickPoly(start, dir, -1, pickInfo, &pickedMap))
+		return false;
+
+	outPos = start + dir * pickInfo.bestDist;
+	return true;
+}
+
+void KothEditor::BeginDrawZone()
+{
+	vec3 hit;
+
+	if (!TraceCursorToWorld(hit))
+		return;
+
+	hit.z += 1.0f;
+
+	m_isDrawingZone = true;
+	m_drawStart = hit;
+	m_drawEnd = hit;
+}
+
+void KothEditor::UpdateDrawZone()
+{
+	if (!m_isDrawingZone)
+		return;
+
+	vec3 hit;
+
+	if (!TraceCursorToWorld(hit))
+		return;
+
+	m_drawEnd = hit;
+}
+
+void KothEditor::FinishDrawZone()
+{
+	if (!m_isDrawingZone)
+		return;
+
+	KothZone zone = MakeDrawPreviewZone();
+	NormalizeZone(zone);
+
+	vec3 size = zone.size();
+
+	// Avoid accidental tiny zones.
+	if (size.x >= 8.0f && size.y >= 8.0f && size.z >= 8.0f)
+	{
+		zone.name = m_newZoneName[0] ? m_newZoneName : "Hill";
+
+		m_zones.push_back(zone);
+		m_selectedZone = (int)m_zones.size() - 1;
+	}
+
+	m_isDrawingZone = false;
+}
+
+void KothEditor::CancelDrawZone()
+{
+	m_isDrawingZone = false;
+}
+
+KothZone KothEditor::MakeDrawPreviewZone() const
+{
+	KothZone zone;
+
+	zone.name = m_newZoneName[0] ? m_newZoneName : "Hill";
+
+	const float minX = std::min(m_drawStart.x, m_drawEnd.x);
+	const float maxX = std::max(m_drawStart.x, m_drawEnd.x);
+
+	const float minY = std::min(m_drawStart.y, m_drawEnd.y);
+	const float maxY = std::max(m_drawStart.y, m_drawEnd.y);
+
+	// Anchor the bottom at the lower clicked Z.
+	const float baseZ = std::min(m_drawStart.z, m_drawEnd.z);
+
+	zone.mins = vec3(minX, minY, baseZ);
+	zone.maxs = vec3(maxX, maxY, baseZ + m_drawHeight);
+
+	return zone;
 }

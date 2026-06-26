@@ -63,6 +63,13 @@ private:
 	void NormalizeZone(KothZone& zone);
 	void SelectZoneUnderCursor();
 
+	bool TraceCursorToWorld(vec3& outPos);
+	void BeginDrawZone();
+	void UpdateDrawZone();
+	void FinishDrawZone();
+	void CancelDrawZone();
+	KothZone MakeDrawPreviewZone() const;
+
 private:
 	Renderer* m_renderer = nullptr;
 
@@ -76,4 +83,9 @@ private:
 
 	char m_newZoneName[64] = "Hill";
 	vec3 m_newZoneSize = vec3(256.0f, 256.0f, 256.0f);
+
+	bool m_isDrawingZone = false;
+	vec3 m_drawStart = vec3();
+	vec3 m_drawEnd = vec3();
+	float m_drawHeight = 128.0f;
 };

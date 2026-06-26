@@ -1476,6 +1476,9 @@ void Renderer::renderLoop()
 			if (!hideGui)
 				gui->draw();
 
+			if (kothEditor)
+				kothEditor->Controls();
+
 			controls();
 
 			if (reloading && fgdFuture.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
