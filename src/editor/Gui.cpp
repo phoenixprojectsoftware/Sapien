@@ -1,6 +1,7 @@
 #include "lang.h"
 #include "Gui.h"
 #include "Renderer.h"
+#include "KothEditor.h"
 #include "ShaderProgram.h"
 #include "primitives.h"
 #include "VertexBuffer.h"
@@ -331,6 +332,11 @@ void Gui::draw()
 		}
 
 		drawBspContexMenu();
+	}
+
+	if (app->kothEditor)
+	{
+		app->kothEditor->DrawGui();
 	}
 
 	app->anyPopupOpened = imgui_io->WantCaptureMouse;
@@ -4582,6 +4588,17 @@ void Gui::drawMenuBar()
 				ImGui::BeginTooltip();
 				ImGui::TextUnformatted("Protect map against decompilers.");
 				ImGui::EndTooltip();
+			}
+
+			if (ImGui::BeginMenu("MODE"))
+			{
+				if (ImGui::MenuItem("KING OF THE HILL ZONE EDIT", 0, app->kothEditor->IsEnabled(), app->getSelectedMap() && !app->isLoading))
+				{
+					if (app->kothEditor)
+						app->kothEditor->ToggleEnabled();
+				}
+				IMGUI_TOOLTIP(g, "EDIT CROSS PRODUCT .koth FILES VISUALLY.");
+				ImGui::EndMenu();
 			}
 
 			if (ImGui::BeginMenu("Additional tools"))

@@ -835,6 +835,7 @@ del "$(TargetDir)bspguy.cfg_bak"</Command>
   <ItemGroup>
     <ClCompile Include="..\ascript\add_on\scriptfile\scriptfile.cpp" />
     <ClCompile Include="..\ascript\add_on\scriptfile\scriptfilesystem.cpp" />
+    <ClCompile Include="..\src\editor\KothEditor.cpp" />
     <ClCompile Include=".\..\ascript\add_on\datetime\datetime.cpp" />
     <ClCompile Include=".\..\ascript\add_on\scriptmath\scriptmath.cpp" />
     <ClCompile Include=".\..\ascript\add_on\scriptmath\scriptmathcomplex.cpp" />
@@ -844,6 +845,7 @@ del "$(TargetDir)bspguy.cfg_bak"</Command>
     <ClCompile Include=".\..\ascript\add_on\scriptstdstring\scriptstdstring_utils.cpp" />
     <ClInclude Include="..\ascript\add_on\scriptfile\scriptfile.h" />
     <ClInclude Include="..\ascript\add_on\scriptfile\scriptfilesystem.h" />
+    <ClInclude Include="..\src\editor\KothEditor.h" />
     <ClInclude Include=".\..\ascript\add_on\datetime\datetime.h" />
     <ClInclude Include=".\..\ascript\add_on\scriptmath\scriptmath.h" />
     <ClInclude Include=".\..\ascript\add_on\scriptmath\scriptmathcomplex.h" />

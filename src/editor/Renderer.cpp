@@ -5,6 +5,7 @@
 #include "VertexBuffer.h"
 #include "shaders.h"
 #include "Gui.h"
+#include "KothEditor.h"
 #include "filedialog/ImFileDialog.h"
 #include "lodepng.h"
 #include "util.h"
@@ -190,6 +191,7 @@ Renderer::Renderer()
 	}
 
 	gui = new Gui(this);
+	kothEditor = new KothEditor(this);
 
 	loadGuiSettings();
 
@@ -390,6 +392,8 @@ Renderer::Renderer()
 Renderer::~Renderer()
 {
 	print_log(get_localized_string(LANG_0901));
+	delete kothEditor;
+	kothEditor = nullptr;
 	glfwTerminate();
 }
 
@@ -1054,6 +1058,13 @@ void Renderer::renderLoop()
 					}
 					glEnable(GL_CULL_FACE);
 				}
+			}
+
+			if (kothEditor && !ortho_overview && !make_screenshot)
+			{
+				matmodel.loadIdentity();
+				colorShader->updateMatrixes();
+				kothEditor->Draw3D();
 			}
 
 
@@ -3041,6 +3052,8 @@ void Renderer::selectMap(Bsp* map)
 {
 	SelectedMap = map;
 	AS_OnMapChange();
+	if (kothEditor)
+		kothEditor->OnMapChanged(map);
 }
 
 void Renderer::deselectMap()

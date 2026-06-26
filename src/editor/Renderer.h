@@ -16,6 +16,7 @@
 #define EDIT_MODEL_LUMPS (FL_PLANES | FL_TEXTURES | FL_VERTICES | FL_NODES | FL_TEXINFO | FL_FACES | FL_LIGHTING | FL_CLIPNODES | FL_LEAVES | FL_EDGES | FL_SURFEDGES | FL_MODELS | FL_MARKSURFACES)
 
 class Gui;
+class KothEditor;
 
 enum transform_modes
 {
@@ -133,6 +134,7 @@ public:
 
 
 	Gui* gui;
+	KothEditor* kothEditor = nullptr;
 
 	GLFWwindow* window;
 
