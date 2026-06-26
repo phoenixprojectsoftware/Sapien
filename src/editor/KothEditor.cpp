@@ -24,6 +24,7 @@
 #include <fstream>
 #include <sstream>
 #include <filesystem>
+#include <cmath>
 
 namespace fs = std::filesystem;
 
@@ -142,6 +143,7 @@ bool KothEditor::Save(const std::string& path)
 
 	file << "# Sapien generated KOTH zones\n";
 	file << "# Format: name originX originY originZ sizeX sizeY sizeZ\n\n";
+	file << std::fixed << std::setprecision(1);
 
 	for (const KothZone& zone : m_zones)
 	{
@@ -182,7 +184,7 @@ void KothEditor::AddZoneAtCamera()
 		return;
 
 	KothZone zone;
-	zone.name = m_newZoneName[0] ? m_newZoneName : "Hill";
+	zone.name = MakeUniqueZoneName(m_newZoneName);
 
 	vec3 center = cameraOrigin + (m_renderer->cameraForward * 128.0f);
 
@@ -190,6 +192,7 @@ void KothEditor::AddZoneAtCamera()
 	zone.maxs = center + (m_newZoneSize * 0.5f);
 
 	NormalizeZone(zone);
+	SnapZone(zone);
 
 	m_zones.push_back(zone);
 	m_selectedZone = (int)m_zones.size() - 1;
@@ -244,6 +247,10 @@ void KothEditor::Controls()
 		m_renderer->pressed[GLFW_KEY_LEFT_CONTROL] ||
 		m_renderer->pressed[GLFW_KEY_RIGHT_CONTROL];
 
+	const bool shiftDown =
+		m_renderer->pressed[GLFW_KEY_LEFT_SHIFT] ||
+		m_renderer->pressed[GLFW_KEY_RIGHT_SHIFT];
+
 	const bool lmbPressed =
 		m_renderer->curLeftMouse == GLFW_PRESS &&
 		m_renderer->oldLeftMouse != GLFW_PRESS;
@@ -297,6 +304,70 @@ void KothEditor::Controls()
 		DeleteSelectedZone();
 		return;
 	}
+
+	if (m_selectedZone < 0 || m_selectedZone >= (int)m_zones.size())
+		return;
+
+	const float moveStep = m_snapEnabled ? m_snapGrid : m_moveStep;
+	const float resizeStep = m_snapEnabled ? m_snapGrid : m_resizeStep;
+
+	vec3 moveDelta;
+	vec3 resizeDelta;
+
+	// Arrow movement / resizing.
+	if (m_renderer->pressed[GLFW_KEY_LEFT] && !m_renderer->oldPressed[GLFW_KEY_LEFT])
+	{
+		if (shiftDown)
+			resizeDelta.x -= resizeStep;
+		else
+			moveDelta.x -= moveStep;
+	}
+
+	if (m_renderer->pressed[GLFW_KEY_RIGHT] && !m_renderer->oldPressed[GLFW_KEY_RIGHT])
+	{
+		if (shiftDown)
+			resizeDelta.x += resizeStep;
+		else
+			moveDelta.x += moveStep;
+	}
+
+	if (m_renderer->pressed[GLFW_KEY_DOWN] && !m_renderer->oldPressed[GLFW_KEY_DOWN])
+	{
+		if (shiftDown)
+			resizeDelta.y -= resizeStep;
+		else
+			moveDelta.y -= moveStep;
+	}
+
+	if (m_renderer->pressed[GLFW_KEY_UP] && !m_renderer->oldPressed[GLFW_KEY_UP])
+	{
+		if (shiftDown)
+			resizeDelta.y += resizeStep;
+		else
+			moveDelta.y += moveStep;
+	}
+
+	if (m_renderer->pressed[GLFW_KEY_PAGE_DOWN] && !m_renderer->oldPressed[GLFW_KEY_PAGE_DOWN])
+	{
+		if (shiftDown)
+			resizeDelta.z -= resizeStep;
+		else
+			moveDelta.z -= moveStep;
+	}
+
+	if (m_renderer->pressed[GLFW_KEY_PAGE_UP] && !m_renderer->oldPressed[GLFW_KEY_PAGE_UP])
+	{
+		if (shiftDown)
+			resizeDelta.z += resizeStep;
+		else
+			moveDelta.z += moveStep;
+	}
+
+	if (moveDelta != vec3())
+		MoveSelectedZone(moveDelta);
+
+	if (resizeDelta != vec3())
+		ResizeSelectedZone(resizeDelta);
 }
 
 void KothEditor::Draw3D()
@@ -354,6 +425,8 @@ void KothEditor::DrawGui()
 	if (!m_loadedForMap)
 		OnMapChanged(map);
 
+	DrawLabels();
+
 	ImGui::Text("File: %s", m_currentPath.c_str());
 
 	if (ImGui::Button("Reload"))
@@ -370,8 +443,23 @@ void KothEditor::DrawGui()
 
 	ImGui::Separator();
 
+	ImGui::Checkbox("Snap to grid", &m_snapEnabled);
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth(100.0f);
+	ImGui::DragFloat("Grid", &m_snapGrid, 1.0f, 1.0f, 1024.0f);
+
+	ImGui::Checkbox("Show labels", &m_showLabels);
+
+	ImGui::SetNextItemWidth(100.0f);
+	ImGui::DragFloat("Move step", &m_moveStep, 1.0f, 1.0f, 1024.0f);
+
+	ImGui::SetNextItemWidth(100.0f);
+	ImGui::DragFloat("Resize step", &m_resizeStep, 1.0f, 1.0f, 1024.0f);
+
+	ImGui::Separator();
+
 	ImGui::DragFloat("DRAW HEIGHT", &m_drawHeight, 1.0f, 8.0f, 2048.0f);
-	ImGui::InputText("New zone name", m_newZoneName, sizeof(m_newZoneName));
+	ImGui::InputText("New zone name base", m_newZoneName, sizeof(m_newZoneName));
 	ImGui::DragFloat3("New zone size", &m_newZoneSize.x, 1.0f, 1.0f, 8192.0f);
 
 	if (ImGui::Button("Add zone in front of camera"))
@@ -412,6 +500,10 @@ void KothEditor::DrawGui()
 		}
 
 		ImGui::SameLine();
+		if (ImGui::Button("Snap selected"))
+			SnapZone(zone);
+
+		ImGui::SameLine();
 
 		if (ImGui::Button("Delete"))
 		{
@@ -430,6 +522,10 @@ void KothEditor::DrawGui()
 	ImGui::TextUnformatted("Ctrl + LMB drag: draw new zone");
 	ImGui::TextUnformatted("LMB: select zone");
 	ImGui::TextUnformatted("N: add zone in front of camera");
+	ImGui::TextUnformatted("Arrow keys: move selected X/Y");
+	ImGui::TextUnformatted("Page Up / Page Down: move selected Z");
+	ImGui::TextUnformatted("Shift + Arrow keys: resize selected X/Y");
+	ImGui::TextUnformatted("Shift + Page Up / Down: resize selected Z");
 	ImGui::TextUnformatted("Delete: delete selected zone");
 	ImGui::TextUnformatted("Escape: cancel drawing");
 
@@ -471,6 +567,9 @@ void KothEditor::BeginDrawZone()
 
 	hit.z += 1.0f;
 
+	if (m_snapEnabled)
+		hit = SnapVec(hit);
+
 	m_isDrawingZone = true;
 	m_drawStart = hit;
 	m_drawEnd = hit;
@@ -485,6 +584,11 @@ void KothEditor::UpdateDrawZone()
 
 	if (!TraceCursorToWorld(hit))
 		return;
+
+	hit.z += 1.0f;
+
+	if (m_snapEnabled)
+		hit = SnapVec(hit);
 
 	m_drawEnd = hit;
 }
@@ -502,7 +606,8 @@ void KothEditor::FinishDrawZone()
 	// Avoid accidental tiny zones.
 	if (size.x >= 8.0f && size.y >= 8.0f && size.z >= 8.0f)
 	{
-		zone.name = m_newZoneName[0] ? m_newZoneName : "Hill";
+		zone.name = MakeUniqueZoneName(m_newZoneName);
+		SnapZone(zone);
 
 		m_zones.push_back(zone);
 		m_selectedZone = (int)m_zones.size() - 1;
@@ -528,11 +633,158 @@ KothZone KothEditor::MakeDrawPreviewZone() const
 	const float minY = std::min(m_drawStart.y, m_drawEnd.y);
 	const float maxY = std::max(m_drawStart.y, m_drawEnd.y);
 
-	// Anchor the bottom at the lower clicked Z.
 	const float baseZ = std::min(m_drawStart.z, m_drawEnd.z);
+	const float height = m_snapEnabled ? SnapFloat(m_drawHeight) : m_drawHeight;
 
 	zone.mins = vec3(minX, minY, baseZ);
-	zone.maxs = vec3(maxX, maxY, baseZ + m_drawHeight);
+	zone.maxs = vec3(maxX, maxY, baseZ + height);
 
 	return zone;
+}
+
+float KothEditor::SnapFloat(float value) const
+{
+	if (!m_snapEnabled || m_snapGrid <= 0.0f)
+		return value;
+
+	return roundf(value / m_snapGrid) * m_snapGrid;
+}
+
+vec3 KothEditor::SnapVec(const vec3& v) const
+{
+	return vec3(
+		SnapFloat(v.x),
+		SnapFloat(v.y),
+		SnapFloat(v.z)
+	);
+}
+
+void KothEditor::SnapZone(KothZone& zone)
+{
+	if (!m_snapEnabled)
+		return;
+
+	zone.mins = SnapVec(zone.mins);
+	zone.maxs = SnapVec(zone.maxs);
+
+	NormalizeZone(zone);
+}
+
+std::string KothEditor::MakeUniqueZoneName(const char* baseName) const
+{
+	std::string base = baseName && baseName[0] ? baseName : "Hill";
+
+	// Aura-SE currently parses names with %s, so avoid spaces.
+	for (char& c : base)
+	{
+		if (c == ' ' || c == '\t')
+			c = '_';
+	}
+
+	for (int i = 1; i < 1000; ++i)
+	{
+		char candidate[128];
+		snprintf(candidate, sizeof(candidate), "%s%02d", base.c_str(), i);
+
+		bool used = false;
+
+		for (const KothZone& zone : m_zones)
+		{
+			if (zone.name == candidate)
+			{
+				used = true;
+				break;
+			}
+		}
+
+		if (!used)
+			return candidate;
+	}
+
+	return base;
+}
+
+void KothEditor::MoveSelectedZone(const vec3& delta)
+{
+	if (m_selectedZone < 0 || m_selectedZone >= (int)m_zones.size())
+		return;
+
+	KothZone& zone = m_zones[m_selectedZone];
+
+	zone.mins += delta;
+	zone.maxs += delta;
+
+	SnapZone(zone);
+}
+
+void KothEditor::ResizeSelectedZone(const vec3& delta)
+{
+	if (m_selectedZone < 0 || m_selectedZone >= (int)m_zones.size())
+		return;
+
+	KothZone& zone = m_zones[m_selectedZone];
+
+	zone.maxs += delta;
+
+	NormalizeZone(zone);
+
+	vec3 size = zone.size();
+
+	// Prevent inverted or tiny zones.
+	if (size.x < 8.0f)
+		zone.maxs.x = zone.mins.x + 8.0f;
+
+	if (size.y < 8.0f)
+		zone.maxs.y = zone.mins.y + 8.0f;
+
+	if (size.z < 8.0f)
+		zone.maxs.z = zone.mins.z + 8.0f;
+
+	SnapZone(zone);
+}
+
+void KothEditor::DrawLabels()
+{
+	if (!m_showLabels || !m_renderer)
+		return;
+
+	ImDrawList* drawList = ImGui::GetForegroundDrawList();
+
+	for (int i = 0; i < (int)m_zones.size(); ++i)
+	{
+		const KothZone& zone = m_zones[i];
+
+		vec3 topCenter = zone.origin();
+		topCenter.z = zone.maxs.z + 16.0f;
+
+		vec2 screen;
+
+		if (!m_renderer->worldToScreen(topCenter, screen))
+			continue;
+
+		const char* text = zone.name.c_str();
+		ImVec2 textSize = ImGui::CalcTextSize(text);
+
+		ImVec2 pos(
+			screen.x - textSize.x * 0.5f,
+			screen.y - textSize.y * 0.5f
+		);
+
+		ImU32 textColor = i == m_selectedZone
+			? IM_COL32(255, 230, 64, 255)
+			: IM_COL32(80, 220, 255, 255);
+
+		// Tiny dark backing so it is readable on bright maps.
+		drawList->AddText(
+			ImVec2(pos.x + 1.0f, pos.y + 1.0f),
+			IM_COL32(0, 0, 0, 220),
+			text
+		);
+
+		drawList->AddText(
+			pos,
+			textColor,
+			text
+		);
+	}
 }

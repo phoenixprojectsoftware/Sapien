@@ -70,6 +70,16 @@ private:
 	void CancelDrawZone();
 	KothZone MakeDrawPreviewZone() const;
 
+	std::string MakeUniqueZoneName(const char* baseName) const;
+
+	void MoveSelectedZone(const vec3& delta);
+	void ResizeSelectedZone(const vec3& delta);
+	void SnapZone(KothZone& zone);
+	vec3 SnapVec(const vec3& v) const;
+	float SnapFloat(float value) const;
+
+	void DrawLabels();
+
 private:
 	Renderer* m_renderer = nullptr;
 
@@ -88,4 +98,10 @@ private:
 	vec3 m_drawStart = vec3();
 	vec3 m_drawEnd = vec3();
 	float m_drawHeight = 128.0f;
+
+	bool m_snapEnabled = true;
+	float m_snapGrid = 16.0f;
+	float m_moveStep = 16.0f;
+	float m_resizeStep = 16.0f;
+	bool m_showLabels = true;
 };

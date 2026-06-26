@@ -182,6 +182,8 @@ public:
 	void clearSelection();
 	void updateEnts();
 	bool isEntTransparent(const char* classname);
+
+	bool worldToScreen(const vec3& world, vec2& screen) const;
 	
 	Bsp* SelectedMap = NULL;
 	PointEntRenderer* pointEntRenderer;

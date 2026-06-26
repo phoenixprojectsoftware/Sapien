@@ -26,6 +26,8 @@
 
 #include "as.h"
 
+#include <cmath>
+
 Renderer* g_app = NULL;
 std::vector<BspRenderer*> mapRenderers{};
 
@@ -415,7 +417,6 @@ void Renderer::updateWindowTitle(double _curTime)
 			}
 			else
 			{
-				glfwSetWindowTitle(window, fmt::format("Sapien [fps {:>4}] - {}", current_fps, g_limits.engineName + "-" + smallPath).c_str());
 				glfwSetWindowTitle(window, fmt::format("Sapien [fps {:>4}] - {}", current_fps, "PROJECT: " + smallPath).c_str());
 			}
 		}
@@ -5093,6 +5094,67 @@ bool Renderer::isEntTransparent(const char* classname)
 			return true;
 	}
 	return false;
+}
+
+bool Renderer::worldToScreen(const vec3& world, vec2& screen) const
+{
+	// Convert Half-Life / BSP coordinates into Sapien render coordinates.
+	// This matches Renderer::drawBox(), drawPolygon3D(), etc.
+	const float x = world.x;
+	const float y = world.z;
+	const float z = -world.y;
+	const float w = 1.0f;
+
+	// Sapien's normal render path is:
+	// projection * matview * matmodel
+	//
+	// For KOTH labels, matmodel should be identity.
+	mat4x4 mvp = projection * matview;
+
+	vec4 clip;
+
+	// Row-major matrix * column vector.
+	clip.x =
+		mvp.m[0] * x +
+		mvp.m[1] * y +
+		mvp.m[2] * z +
+		mvp.m[3] * w;
+
+	clip.y =
+		mvp.m[4] * x +
+		mvp.m[5] * y +
+		mvp.m[6] * z +
+		mvp.m[7] * w;
+
+	clip.z =
+		mvp.m[8] * x +
+		mvp.m[9] * y +
+		mvp.m[10] * z +
+		mvp.m[11] * w;
+
+	clip.w =
+		mvp.m[12] * x +
+		mvp.m[13] * y +
+		mvp.m[14] * z +
+		mvp.m[15] * w;
+
+	if (fabsf(clip.w) < 0.0001f)
+		return false;
+
+	const float ndcX = clip.x / clip.w;
+	const float ndcY = clip.y / clip.w;
+	const float ndcZ = clip.z / clip.w;
+
+	if (ndcZ < -1.0f || ndcZ > 1.0f)
+		return false;
+
+	if (ndcX < -1.0f || ndcX > 1.0f || ndcY < -1.0f || ndcY > 1.0f)
+		return false;
+
+	screen.x = (ndcX * 0.5f + 0.5f) * windowWidth;
+	screen.y = (1.0f - (ndcY * 0.5f + 0.5f)) * windowHeight;
+
+	return true;
 }
 
 // now it temporary used for something
