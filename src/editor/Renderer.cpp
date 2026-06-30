@@ -1073,6 +1073,12 @@ void Renderer::renderLoop()
 				kothEditor->Draw3D();
 			}
 
+			if (auraPointEditor && !ortho_overview && !make_screenshot)
+			{
+				matmodel.loadIdentity();
+				colorShader->updateMatrixes();
+				auraPointEditor->Draw3D();
+			}
 
 			glDepthMask(GL_FALSE);
 			glDepthFunc(GL_ALWAYS);

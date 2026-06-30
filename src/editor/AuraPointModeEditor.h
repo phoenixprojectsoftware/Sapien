@@ -50,6 +50,8 @@ public:
 
 	void DrawGui();
 
+	void Draw3D();
+
 private:
 	const char* GetModeName() const;
 	const char* GetModeFolder() const;
@@ -67,6 +69,10 @@ private:
 	void DeleteSelectedPoint();
 
 	void SanitizePoint(AuraModePoint& point);
+
+	void DrawLabels();
+	const char* GetDisplayName(const AuraModePoint& point) const;
+	COLOR4 GetPointColor(const AuraModePoint& point, bool selected) const;
 
 private:
 	Renderer* m_renderer = nullptr;

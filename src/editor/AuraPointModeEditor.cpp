@@ -423,6 +423,8 @@ void AuraPointModeEditor::DrawGui()
 	if (!m_loadedForMap)
 		OnMapChanged(map);
 
+	DrawLabels();
+
 	ImGui::Text("File: %s", m_currentPath.c_str());
 
 	if (ImGui::Button("Reload"))
@@ -536,4 +538,146 @@ void AuraPointModeEditor::DrawGui()
 	}
 
 	ImGui::End();
+}
+
+COLOR4 AuraPointModeEditor::GetPointColor(const AuraModePoint& point, bool selected) const
+{
+	if (selected)
+		return COLOR4(255, 255, 255, 220);
+
+	if (point.classname == "item_flag_team1")
+		return COLOR4(80, 160, 255, 180); // blue flag
+
+	if (point.classname == "info_player_team1")
+		return COLOR4(80, 200, 255, 140); // blue spawn
+
+	if (point.classname == "item_flag_team2")
+		return COLOR4(255, 80, 80, 180); // red flag
+
+	if (point.classname == "info_player_team2")
+		return COLOR4(255, 120, 80, 140); // red spawn
+
+	if (point.classname == "item_dom_controlpoint")
+		return COLOR4(255, 220, 64, 180); // DOM point
+
+	return COLOR4(255, 255, 255, 160);
+}
+
+const char* AuraPointModeEditor::GetDisplayName(const AuraModePoint& point) const
+{
+	if (point.classname == "item_flag_team1")
+		return "Blue Flag";
+
+	if (point.classname == "item_flag_team2")
+		return "Red Flag";
+
+	if (point.classname == "info_player_team1")
+		return "Blue Spawn";
+
+	if (point.classname == "info_player_team2")
+		return "Red Spawn";
+
+	if (point.classname == "item_dom_controlpoint")
+	{
+		if (!point.data1.empty())
+			return point.data1.c_str();
+
+		return "Control Point";
+	}
+
+	return point.classname.c_str();
+}
+
+void AuraPointModeEditor::Draw3D()
+{
+	if (!m_enabled || m_mode == AuraPointMode::None)
+		return;
+
+	if (!m_renderer)
+		return;
+
+	glDisable(GL_CULL_FACE);
+
+	for (int i = 0; i < (int)m_points.size(); ++i)
+	{
+		const AuraModePoint& point = m_points[i];
+
+		const bool selected = i == m_selectedPoint;
+
+		COLOR4 color = GetPointColor(point, selected);
+
+		// Point entities are shown as player-ish marker boxes.
+		// Keep them small enough not to obscure the map.
+		vec3 mins = point.origin + vec3(-16.0f, -16.0f, 0.0f);
+		vec3 maxs = point.origin + vec3(16.0f, 16.0f, 56.0f);
+
+		m_renderer->drawBox(mins, maxs, color);
+
+		// Add a small taller post for flags/control points so they stand out.
+		if (point.classname == "item_flag_team1" ||
+			point.classname == "item_flag_team2" ||
+			point.classname == "item_dom_controlpoint")
+		{
+			vec3 postMins = point.origin + vec3(-4.0f, -4.0f, 0.0f);
+			vec3 postMaxs = point.origin + vec3(4.0f, 4.0f, 96.0f);
+
+			m_renderer->drawBox(postMins, postMaxs, color);
+		}
+	}
+
+	glEnable(GL_CULL_FACE);
+}
+
+void AuraPointModeEditor::DrawLabels()
+{
+	if (!m_enabled || m_mode == AuraPointMode::None)
+		return;
+
+	if (!m_renderer)
+		return;
+
+	ImDrawList* drawList = ImGui::GetForegroundDrawList();
+
+	for (int i = 0; i < (int)m_points.size(); ++i)
+	{
+		const AuraModePoint& point = m_points[i];
+
+		vec3 labelOrigin = point.origin;
+		labelOrigin.z += 112.0f;
+
+		vec2 screen;
+
+		if (!m_renderer->worldToScreen(labelOrigin, screen))
+			continue;
+
+		const char* text = GetDisplayName(point);
+		ImVec2 textSize = ImGui::CalcTextSize(text);
+
+		ImVec2 pos(
+			screen.x - textSize.x * 0.5f,
+			screen.y - textSize.y * 0.5f
+		);
+
+		ImU32 color = i == m_selectedPoint
+			? IM_COL32(255, 255, 255, 255)
+			: IM_COL32(255, 220, 64, 255);
+
+		if (point.classname == "item_flag_team1" || point.classname == "info_player_team1")
+			color = i == m_selectedPoint ? IM_COL32(255, 255, 255, 255) : IM_COL32(80, 180, 255, 255);
+
+		if (point.classname == "item_flag_team2" || point.classname == "info_player_team2")
+			color = i == m_selectedPoint ? IM_COL32(255, 255, 255, 255) : IM_COL32(255, 100, 100, 255);
+
+		drawList->AddText(
+			ImVec2(pos.x + 1.0f, pos.y + 1.0f),
+			IM_COL32(0, 0, 0, 220),
+			text
+		);
+
+		drawList->AddText(
+			pos,
+			color,
+			text
+		);
+	}
 }
