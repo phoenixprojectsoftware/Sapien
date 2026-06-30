@@ -54,6 +54,8 @@ public:
 
 	void Controls();
 
+	bool HasUnsavedChanges() const { return m_dirty; }
+
 private:
 	const char* GetModeName() const;
 	const char* GetModeFolder() const;
@@ -97,6 +99,16 @@ private:
 	void DuplicateSelectedPoint();
 	void CreateStarterLayout();
 
+	void MarkDirty();
+	void ClearDirty();
+
+	bool CanDiscardUnsavedChanges();
+	void RequestClose();
+	void RequestModeSwitch(AuraPointMode mode);
+	void RequestReload();
+
+	void DrawUnsavedChangesPopup();
+
 private:
 	Renderer* m_renderer = nullptr;
 
@@ -117,4 +129,11 @@ private:
 	float m_snapGrid = 16.0f;
 	float m_moveStep = 16.0f;
 	float m_rotateStep = 15.0f;
+
+	bool m_dirty = false;
+
+	bool m_pendingClose = false;
+	bool m_pendingReload = false;
+	bool m_pendingModeSwitch = false;
+	AuraPointMode m_pendingMode = AuraPointMode::None;
 };

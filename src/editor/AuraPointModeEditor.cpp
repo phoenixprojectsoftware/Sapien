@@ -108,6 +108,7 @@ void AuraPointModeEditor::SetMode(AuraPointMode mode)
 		m_selectedPoint = -1;
 		m_currentPath.clear();
 		m_loadedForMap = false;
+		ClearDirty();
 		return;
 	}
 
@@ -126,11 +127,11 @@ void AuraPointModeEditor::ToggleMode(AuraPointMode mode)
 {
 	if (m_enabled && m_mode == mode)
 	{
-		SetMode(AuraPointMode::None);
+		RequestClose();
 		return;
 	}
 
-	SetMode(mode);
+	RequestModeSwitch(mode);
 }
 
 void AuraPointModeEditor::OnMapChanged(Bsp* map)
@@ -312,6 +313,7 @@ bool AuraPointModeEditor::Load(const std::string& path)
 	}
 
 	print_log("Aura {} editor: loaded {} points from {}\n", GetModeName(), m_points.size(), path);
+	ClearDirty();
 	return true;
 }
 
@@ -380,6 +382,7 @@ bool AuraPointModeEditor::Save(const std::string& path)
 	}
 
 	print_log("Aura {} editor: saved {} points to {}\n", GetModeName(), m_points.size(), path);
+	ClearDirty();
 	return true;
 }
 
@@ -416,6 +419,7 @@ void AuraPointModeEditor::AddDefaultPoint()
 
 	m_points.push_back(point);
 	m_selectedPoint = (int)m_points.size() - 1;
+	MarkDirty();
 }
 
 void AuraPointModeEditor::DeleteSelectedPoint()
@@ -427,6 +431,7 @@ void AuraPointModeEditor::DeleteSelectedPoint()
 
 	if (m_selectedPoint >= (int)m_points.size())
 		m_selectedPoint = (int)m_points.size() - 1;
+	MarkDirty();
 }
 
 void AuraPointModeEditor::DrawGui()
@@ -437,7 +442,7 @@ void AuraPointModeEditor::DrawGui()
 	Bsp* map = m_renderer ? m_renderer->getSelectedMap() : nullptr;
 
 	char title[64];
-	snprintf(title, sizeof(title), "Aura %s Entity Editor", GetModeName());
+	snprintf(title, sizeof(title), "AURA %s ENTITY EDITOR%s", GetModeName(), m_dirty ? "*" : "");
 
 	bool open = true;
 
@@ -446,7 +451,7 @@ void AuraPointModeEditor::DrawGui()
 	if (!open)
 	{
 		ImGui::End();
-		SetMode(AuraPointMode::None);
+		RequestClose();
 		return;
 	}
 
@@ -466,7 +471,7 @@ void AuraPointModeEditor::DrawGui()
 
 	if (ImGui::Button("Reload"))
 	{
-		Load(m_currentPath);
+		RequestReload();
 	}
 
 	ImGui::SameLine();
@@ -608,20 +613,40 @@ void AuraPointModeEditor::DrawGui()
 			}
 
 			if (ImGui::Combo("Classname", &current, classnames, 4))
+			{
 				point.classname = classnames[current];
+				MarkDirty();
+			}
 		}
 		else if (m_mode == AuraPointMode::DOM)
 		{
 			point.classname = "item_dom_controlpoint";
-			ImGui::InputText("Location name", &point.data1);
+			if (ImGui::InputText("Location name", &point.data1))
+				MarkDirty();
 		}
 
-		ImGui::DragFloat3("Origin", &point.origin.x, 1.0f);
-		ImGui::DragFloat3("Angles", &point.angles.x, 1.0f);
+		if (ImGui::DragFloat3("Origin", &point.origin.x, 1.0f))
+		{
+			if (m_snapEnabled)
+				SnapPoint(point);
+			MarkDirty();
+		}
+
+		if (ImGui::DragFloat3("Angles", &point.angles.x, 1.0f))
+		{
+			while (point.angles.y < 0.0f)
+				point.angles.y += 360.0f;
+
+			while (point.angles.y >= 360.0f)
+				point.angles.y -= 360.0f;
+
+			MarkDirty();
+		}
 
 		if (ImGui::Button("Sanitize"))
 		{
 			SanitizePoint(point);
+			MarkDirty();
 		}
 
 		vec3 origin = point.origin;
@@ -642,6 +667,8 @@ void AuraPointModeEditor::DrawGui()
 	ImGui::TextUnformatted("Page Up / Page Down: move selected Z");
 	ImGui::TextUnformatted("Q / E: rotate selected yaw");
 	ImGui::TextUnformatted("Delete: delete selected point");
+
+	DrawUnsavedChangesPopup();
 
 	ImGui::End();
 }
@@ -860,6 +887,7 @@ void AuraPointModeEditor::PlacePointAtCursor()
 
 	m_points.push_back(point);
 	m_selectedPoint = (int)m_points.size() - 1;
+	MarkDirty();
 }
 
 void AuraPointModeEditor::SelectPointUnderCursor()
@@ -906,6 +934,7 @@ void AuraPointModeEditor::MoveSelectedPoint(const vec3& delta)
 
 	point.origin += delta;
 	SnapPoint(point);
+	MarkDirty();
 }
 
 void AuraPointModeEditor::RotateSelectedPoint(float yawDelta)
@@ -924,6 +953,7 @@ void AuraPointModeEditor::RotateSelectedPoint(float yawDelta)
 
 	while (point.angles.y >= 360.0f)
 		point.angles.y -= 360.0f;
+	MarkDirty();
 }
 
 void AuraPointModeEditor::Controls()
@@ -1206,6 +1236,7 @@ void AuraPointModeEditor::DuplicateSelectedPoint()
 
 	m_points.push_back(point);
 	m_selectedPoint = (int)m_points.size() - 1;
+	MarkDirty();
 }
 
 void AuraPointModeEditor::CreateStarterLayout()
@@ -1282,4 +1313,136 @@ void AuraPointModeEditor::CreateStarterLayout()
 
 	if (!m_points.empty())
 		m_selectedPoint = 0;
+
+	MarkDirty();
+}
+
+void AuraPointModeEditor::MarkDirty()
+{
+	m_dirty = true;
+}
+
+void AuraPointModeEditor::ClearDirty()
+{
+	m_dirty = false;
+}
+
+void AuraPointModeEditor::RequestReload()
+{
+	if (!m_dirty)
+	{
+		Load(m_currentPath);
+		return;
+	}
+
+	m_pendingReload = true;
+	ImGui::OpenPopup("UNSAVED CHANGES");
+}
+
+void AuraPointModeEditor::RequestClose()
+{
+	if (!m_dirty)
+	{
+		SetMode(AuraPointMode::None);
+		return;
+	}
+
+	m_pendingClose = true;
+	ImGui::OpenPopup("UNSAVED CHANGES");
+}
+
+void AuraPointModeEditor::RequestModeSwitch(AuraPointMode mode)
+{
+	if (mode == AuraPointMode::None)
+	{
+		RequestClose();
+		return;
+	}
+
+	if (!m_dirty)
+	{
+		SetMode(mode);
+		return;
+	}
+
+	m_pendingModeSwitch = true;
+	m_pendingMode = mode;
+	ImGui::OpenPopup("UNSAVED CHANGES");
+}
+
+void AuraPointModeEditor::DrawUnsavedChangesPopup()
+{
+	if (!ImGui::BeginPopupModal("UNSAVED CHANGES", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+		return;
+
+	ImGui::TextUnformatted("You have unsaved changes to the current gamemode file.");
+	ImGui::TextUnformatted("What would you like to do?");
+
+	ImGui::Separator();
+
+	if (ImGui::Button("Save and continue", ImVec2(150, 0)))
+	{
+		Save(m_currentPath);
+
+		if (m_pendingReload)
+		{
+			m_pendingReload = false;
+			Load(m_currentPath);
+		}
+		else if (m_pendingModeSwitch)
+		{
+			AuraPointMode mode = m_pendingMode;
+			m_pendingModeSwitch = false;
+			m_pendingMode = AuraPointMode::None;
+			SetMode(mode);
+		}
+		else if (m_pendingClose)
+		{
+			m_pendingClose = false;
+			SetMode(AuraPointMode::None);
+		}
+
+		ImGui::CloseCurrentPopup();
+	}
+
+	ImGui::SameLine();
+
+	if (ImGui::Button("Discard", ImVec2(100, 0)))
+	{
+		ClearDirty();
+
+		if (m_pendingReload)
+		{
+			m_pendingReload = false;
+			Load(m_currentPath);
+		}
+		else if (m_pendingModeSwitch)
+		{
+			AuraPointMode mode = m_pendingMode;
+			m_pendingModeSwitch = false;
+			m_pendingMode = AuraPointMode::None;
+			SetMode(mode);
+		}
+		else if (m_pendingClose)
+		{
+			m_pendingClose = false;
+			SetMode(AuraPointMode::None);
+		}
+
+		ImGui::CloseCurrentPopup();
+	}
+
+	ImGui::SameLine();
+
+	if (ImGui::Button("Cancel", ImVec2(100, 0)))
+	{
+		m_pendingReload = false;
+		m_pendingModeSwitch = false;
+		m_pendingClose = false;
+		m_pendingMode = AuraPointMode::None;
+
+		ImGui::CloseCurrentPopup();
+	}
+
+	ImGui::EndPopup();
 }
