@@ -31,6 +31,21 @@
 #include <sstream>
 #include <GLFW/glfw3.h>
 
+static constexpr float M_PI = 3.14159265358979323846f;
+
+static vec3 YawToForward(float yawDegrees)
+{
+	const float radians = yawDegrees * (M_PI / 180.f);
+
+	return vec3(cosf(radians), sinf(radians), 0.0f);
+}
+
+static vec3 YawToRight(float yawDegrees)
+{
+	const float radians = (yawDegrees + 90.0f) * (M_PI / 180.0f);
+	return vec3(cosf(radians), sinf(radians), 0.0f);
+}
+
 namespace fs = std::filesystem;
 
 AuraPointModeEditor::AuraPointModeEditor(Renderer* renderer)
@@ -690,6 +705,8 @@ void AuraPointModeEditor::Draw3D()
 
 			m_renderer->drawBox(postMins, postMaxs, color);
 		}
+
+		DrawFacingArrow(point, selected);
 	}
 
 	glEnable(GL_CULL_FACE);
@@ -967,4 +984,57 @@ void AuraPointModeEditor::Controls()
 		RotateSelectedPoint(m_rotateStep);
 		return;
 	}
+}
+
+void AuraPointModeEditor::DrawFacingArrow(const AuraModePoint& point, bool selected)
+{
+	if (!m_renderer)
+		return;
+
+	COLOR4 color = GetPointColor(point, selected);
+
+	// Spawn points care most about yaw, but drawing this for every mode point
+	// makes Q/E rotation visually obvious everywhere.
+	const float yaw = point.angles.y;
+
+	vec3 forward = YawToForward(yaw);
+	vec3 right = YawToRight(yaw);
+
+	const float baseHeight = 24.0f;
+	const float arrowLength = 64.0f;
+	const float arrowHalfWidth = 12.0f;
+
+	vec3 start = point.origin + vec3(0.0f, 0.0f, baseHeight);
+	vec3 tip = start + forward * arrowLength;
+	vec3 left = tip - forward * 16.0f - right * arrowHalfWidth;
+	vec3 rightWing = tip - forward * 16.0f + right * arrowHalfWidth;
+
+	// Main shaft as a thin box.
+	vec3 shaftMid = start + forward * (arrowLength * 0.5f);
+	vec3 shaftMins = shaftMid + vec3(-3.0f, -3.0f, -3.0f);
+	vec3 shaftMaxs = shaftMid + vec3(3.0f, 3.0f, 3.0f);
+
+	// This is an approximate shaft box, not rotated, but it gives a visible
+	// anchor even before the triangle arrowhead.
+	m_renderer->drawBox(shaftMins, shaftMaxs, color);
+
+	glDisable(GL_TEXTURE_2D);
+	glDisable(GL_CULL_FACE);
+	glLineWidth(selected ? 3.0f : 2.0f);
+
+	glColor4ub(color.r, color.g, color.b, selected ? 255 : 220);
+
+	glBegin(GL_LINES);
+	glVertex3f(start.x, start.z, -start.y);
+	glVertex3f(tip.x, tip.z, -tip.y);
+
+	glVertex3f(tip.x, tip.z, -tip.y);
+	glVertex3f(left.x, left.z, -left.y);
+
+	glVertex3f(tip.x, tip.z, -tip.y);
+	glVertex3f(rightWing.x, rightWing.z, -rightWing.y);
+	glEnd();
+
+	glLineWidth(1.0f);
+	glEnable(GL_CULL_FACE);
 }

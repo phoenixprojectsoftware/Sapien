@@ -87,6 +87,8 @@ private:
 	vec3 SnapVec(const vec3& v) const;
 	void SnapPoint(AuraModePoint& point);
 
+	void DrawFacingArrow(const AuraModePoint& point, bool selected);
+
 private:
 	Renderer* m_renderer = nullptr;
 
