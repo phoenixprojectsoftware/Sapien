@@ -9125,7 +9125,7 @@ void Gui::drawTransformWidget()
 void Gui::loadFonts()
 {
 	const std::string fontPath = "./fonts/";
-	const std::string mainFont = "Conv.ttf";
+	const std::string mainFont = "Eurostile_Bold.otf";
 	std::vector<std::string> fontFiles;
 	ImFontConfig config;
 	config.SizePixels = fontSize * 2.0f;
