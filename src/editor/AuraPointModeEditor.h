@@ -89,6 +89,14 @@ private:
 
 	void DrawFacingArrow(const AuraModePoint& point, bool selected);
 
+	std::string GetFriendlyClassname(const std::string& classname) const;
+
+	void DrawValidation();
+	bool Validate(std::vector<std::string>& warnings) const;
+
+	void DuplicateSelectedPoint();
+	void CreateStarterLayout();
+
 private:
 	Renderer* m_renderer = nullptr;
 

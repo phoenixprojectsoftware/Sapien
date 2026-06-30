@@ -320,6 +320,16 @@ bool AuraPointModeEditor::Save(const std::string& path)
 	if (path.empty())
 		return false;
 
+	std::vector<std::string> warnings;
+
+	if (!Validate(warnings))
+	{
+		print_log(PRINT_RED, "Aura {} editor: saving with validation warnings: \n", GetModeName());
+
+		for (const std::string& warning : warnings)
+			print_log(PRINT_RED, " - {}\n", warning);
+	}
+
 	fs::path outPath(path);
 
 	if (!outPath.parent_path().empty())
@@ -480,7 +490,21 @@ void AuraPointModeEditor::DrawGui()
 		DeleteSelectedPoint();
 	}
 
+	ImGui::SameLine();
+	if (ImGui::Button("Duplicate"))
+	{
+		DuplicateSelectedPoint();
+	}
+
 	ImGui::Separator();
+	DrawValidation();
+
+	DrawValidation();
+
+	if (ImGui::Button("Create Starter Layout"))
+	{
+		CreateStarterLayout();
+	}
 
 	ImGui::Separator();
 
@@ -647,27 +671,21 @@ COLOR4 AuraPointModeEditor::GetPointColor(const AuraModePoint& point, bool selec
 
 const char* AuraPointModeEditor::GetDisplayName(const AuraModePoint& point) const
 {
-	if (point.classname == "item_flag_team1")
-		return "Blue Flag";
-
-	if (point.classname == "item_flag_team2")
-		return "Red Flag";
-
-	if (point.classname == "info_player_team1")
-		return "Blue Spawn";
-
-	if (point.classname == "info_player_team2")
-		return "Red Spawn";
+	static std::string displayName;
 
 	if (point.classname == "item_dom_controlpoint")
 	{
 		if (!point.data1.empty())
-			return point.data1.c_str();
+		{
+			displayName = point.data1;
+			return displayName.c_str();
+		}
 
 		return "Control Point";
 	}
 
-	return point.classname.c_str();
+	displayName = GetFriendlyClassname(point.classname);
+	return displayName.c_str();
 }
 
 void AuraPointModeEditor::Draw3D()
@@ -942,6 +960,12 @@ void AuraPointModeEditor::Controls()
 		return;
 	}
 
+	if (ctrlDown && m_renderer->pressed[GLFW_KEY_D] && !m_renderer->oldPressed[GLFW_KEY_D])
+	{
+		DuplicateSelectedPoint();
+		return;
+	}
+
 	if (m_selectedPoint < 0 || m_selectedPoint >= (int)m_points.size())
 		return;
 
@@ -1037,4 +1061,225 @@ void AuraPointModeEditor::DrawFacingArrow(const AuraModePoint& point, bool selec
 
 	glLineWidth(1.0f);
 	glEnable(GL_CULL_FACE);
+}
+
+std::string AuraPointModeEditor::GetFriendlyClassname(const std::string& classname) const
+{
+	if (classname == "item_flag_team1")
+		return "Blue Flag";
+
+	if (classname == "item_flag_team2")
+		return "Red Flag";
+
+	if (classname == "info_player_team1")
+		return "Blue Spawn";
+
+	if (classname == "info_player_team2")
+		return "Red Spawn";
+
+	if (classname == "item_dom_controlpoint")
+		return "DOM Control Point";
+
+	return classname;
+}
+
+bool AuraPointModeEditor::Validate(std::vector<std::string>& warnings) const
+{
+	warnings.clear();
+
+	if (m_mode == AuraPointMode::CTF)
+	{
+		int blueFlags = 0;
+		int redFlags = 0;
+		int blueSpawns = 0;
+		int redSpawns = 0;
+
+		for (const AuraModePoint& point : m_points)
+		{
+			if (point.classname == "item_flag_team1")
+				++blueFlags;
+			else if (point.classname == "item_flag_team2")
+				++redFlags;
+			else if (point.classname == "info_player_team1")
+				++blueSpawns;
+			else if (point.classname == "info_player_team2")
+				++redSpawns;
+		}
+
+		if (blueFlags == 0)
+			warnings.push_back("Missing Blue Flag: item_flag_team1");
+		else if (blueFlags > 1)
+			warnings.push_back("More than one Blue Flag exists.");
+
+		if (redFlags == 0)
+			warnings.push_back("Missing Red Flag: item_flag_team2");
+		else if (redFlags > 1)
+			warnings.push_back("More than one Red Flag exists.");
+
+		if (blueSpawns == 0)
+			warnings.push_back("Missing Blue Spawn: info_player_team1");
+
+		if (redSpawns == 0)
+			warnings.push_back("Missing Red Spawn: info_player_team2");
+	}
+	else if (m_mode == AuraPointMode::DOM)
+	{
+		int controlPoints = 0;
+		std::vector<std::string> names;
+
+		for (const AuraModePoint& point : m_points)
+		{
+			if (point.classname != "item_dom_controlpoint")
+				continue;
+
+			++controlPoints;
+
+			if (point.data1.empty())
+			{
+				warnings.push_back("A DOM control point has an empty name.");
+				continue;
+			}
+
+			std::string name = point.data1;
+
+			for (char& c : name)
+			{
+				if (c == ' ' || c == '\t')
+					c = '_';
+			}
+
+			if (std::find(names.begin(), names.end(), name) != names.end())
+			{
+				warnings.push_back("Duplicate DOM control point name: " + name);
+			}
+			else
+			{
+				names.push_back(name);
+			}
+		}
+
+		if (controlPoints == 0)
+			warnings.push_back("Missing DOM control points.");
+	}
+
+	return warnings.empty();
+}
+
+void AuraPointModeEditor::DrawValidation()
+{
+	std::vector<std::string> warnings;
+
+	if (Validate(warnings))
+	{
+		ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f), "Validation: OK");
+		return;
+	}
+
+	ImGui::TextColored(ImVec4(1.0f, 0.55f, 0.2f, 1.0f), "Validation warnings:");
+
+	for (const std::string& warning : warnings)
+	{
+		ImGui::BulletText("%s", warning.c_str());
+	}
+}
+
+void AuraPointModeEditor::DuplicateSelectedPoint()
+{
+	if (m_selectedPoint < 0 || m_selectedPoint >= (int)m_points.size())
+		return;
+
+	AuraModePoint point = m_points[m_selectedPoint];
+
+	point.origin.x += m_snapEnabled ? m_snapGrid : 32.0f;
+	point.origin.y += m_snapEnabled ? m_snapGrid : 32.0f;
+
+	if (m_mode == AuraPointMode::DOM)
+	{
+		if (point.data1.empty())
+			point.data1 = "ControlPoint";
+
+		point.data1 += "_Copy";
+	}
+
+	SanitizePoint(point);
+	SnapPoint(point);
+
+	m_points.push_back(point);
+	m_selectedPoint = (int)m_points.size() - 1;
+}
+
+void AuraPointModeEditor::CreateStarterLayout()
+{
+	m_points.clear();
+	m_selectedPoint = -1;
+
+	vec3 base = vec3();
+
+	if (m_renderer)
+		base = cameraOrigin + (m_renderer->cameraForward * 128.0f);
+
+	base = SnapVec(base);
+
+	if (m_mode == AuraPointMode::CTF)
+	{
+		AuraModePoint blueFlag;
+		blueFlag.classname = "item_flag_team1";
+		blueFlag.origin = base + vec3(-128.0f, 0.0f, 0.0f);
+		blueFlag.angles = vec3(0.0f, 0.0f, 0.0f);
+		SanitizePoint(blueFlag);
+		SnapPoint(blueFlag);
+		m_points.push_back(blueFlag);
+
+		AuraModePoint redFlag;
+		redFlag.classname = "item_flag_team2";
+		redFlag.origin = base + vec3(128.0f, 0.0f, 0.0f);
+		redFlag.angles = vec3(0.0f, 180.0f, 0.0f);
+		SanitizePoint(redFlag);
+		SnapPoint(redFlag);
+		m_points.push_back(redFlag);
+
+		AuraModePoint blueSpawn;
+		blueSpawn.classname = "info_player_team1";
+		blueSpawn.origin = base + vec3(-128.0f, 96.0f, 0.0f);
+		blueSpawn.angles = vec3(0.0f, 0.0f, 0.0f);
+		SanitizePoint(blueSpawn);
+		SnapPoint(blueSpawn);
+		m_points.push_back(blueSpawn);
+
+		AuraModePoint redSpawn;
+		redSpawn.classname = "info_player_team2";
+		redSpawn.origin = base + vec3(128.0f, 96.0f, 0.0f);
+		redSpawn.angles = vec3(0.0f, 180.0f, 0.0f);
+		SanitizePoint(redSpawn);
+		SnapPoint(redSpawn);
+		m_points.push_back(redSpawn);
+	}
+	else if (m_mode == AuraPointMode::DOM)
+	{
+		const char* names[] = { "A", "B", "C" };
+
+		const vec3 offsets[] =
+		{
+			vec3(-128.0f, 0.0f, 0.0f),
+			vec3(0.0f, 128.0f, 0.0f),
+			vec3(128.0f, 0.0f, 0.0f)
+		};
+
+		for (int i = 0; i < 3; ++i)
+		{
+			AuraModePoint point;
+			point.classname = "item_dom_controlpoint";
+			point.origin = base + offsets[i];
+			point.angles = vec3();
+			point.data1 = names[i];
+
+			SanitizePoint(point);
+			SnapPoint(point);
+
+			m_points.push_back(point);
+		}
+	}
+
+	if (!m_points.empty())
+		m_selectedPoint = 0;
 }
