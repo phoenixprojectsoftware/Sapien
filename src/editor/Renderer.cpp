@@ -1491,6 +1491,9 @@ void Renderer::renderLoop()
 			if (kothEditor)
 				kothEditor->Controls();
 
+			if (auraPointEditor)
+				auraPointEditor->Controls();
+
 			controls();
 
 			if (reloading && fgdFuture.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)

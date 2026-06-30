@@ -52,6 +52,8 @@ public:
 
 	void Draw3D();
 
+	void Controls();
+
 private:
 	const char* GetModeName() const;
 	const char* GetModeFolder() const;
@@ -74,6 +76,17 @@ private:
 	const char* GetDisplayName(const AuraModePoint& point) const;
 	COLOR4 GetPointColor(const AuraModePoint& point, bool selected) const;
 
+	bool TraceCursorToWorld(vec3& outPos);
+	void PlacePointAtCursor();
+	void SelectPointUnderCursor();
+
+	void MoveSelectedPoint(const vec3& delta);
+	void RotateSelectedPoint(float yawDelta);
+
+	float SnapFloat(float value) const;
+	vec3 SnapVec(const vec3& v) const;
+	void SnapPoint(AuraModePoint& point);
+
 private:
 	Renderer* m_renderer = nullptr;
 
@@ -86,4 +99,12 @@ private:
 
 	std::vector<AuraModePoint> m_points;
 	int m_selectedPoint = -1;
+
+	std::string m_newClassname = "item_flag_team1";
+	std::string m_newDomName = "ControlPoint";
+
+	bool m_snapEnabled = true;
+	float m_snapGrid = 16.0f;
+	float m_moveStep = 16.0f;
+	float m_rotateStep = 15.0f;
 };

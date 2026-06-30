@@ -13,6 +13,8 @@
 
 #include "Renderer.h"
 #include "Bsp.h"
+#include "BspRenderer.h"
+#include "bsplimits.h"
 #include "Settings.h"
 #include "util.h"
 #include "log.h"
@@ -20,11 +22,14 @@
 #include "imgui.h"
 #include "misc/cpp/imgui_stdlib.h"
 
+#include <cmath>
+#include <cfloat>
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <sstream>
+#include <GLFW/glfw3.h>
 
 namespace fs = std::filesystem;
 
@@ -359,23 +364,30 @@ void AuraPointModeEditor::AddDefaultPoint()
 		return;
 
 	AuraModePoint point;
-	point.classname = GetDefaultClassname();
 
-	if (m_renderer)
+	if (m_mode == AuraPointMode::CTF)
 	{
-		point.origin = cameraOrigin + (m_renderer->cameraForward * 128.0f);
+		point.classname = m_newClassname.empty() ? GetDefaultClassname() : m_newClassname;
+	}
+	else if (m_mode == AuraPointMode::DOM)
+	{
+		point.classname = "item_dom_controlpoint";
+		point.data1 = m_newDomName.empty() ? "ControlPoint" : m_newDomName;
 	}
 	else
 	{
-		point.origin = vec3();
+		return;
 	}
+
+	if (m_renderer)
+		point.origin = cameraOrigin + (m_renderer->cameraForward * 128.0f);
+	else
+		point.origin = vec3();
 
 	point.angles = vec3();
 
-	if (m_mode == AuraPointMode::DOM)
-		point.data1 = "ControlPoint";
-
 	SanitizePoint(point);
+	SnapPoint(point);
 
 	m_points.push_back(point);
 	m_selectedPoint = (int)m_points.size() - 1;
@@ -451,6 +463,52 @@ void AuraPointModeEditor::DrawGui()
 	if (ImGui::Button("Delete"))
 	{
 		DeleteSelectedPoint();
+	}
+
+	ImGui::Separator();
+
+	ImGui::Separator();
+
+	ImGui::Checkbox("Snap to grid", &m_snapEnabled);
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth(100.0f);
+	ImGui::DragFloat("Grid", &m_snapGrid, 1.0f, 1.0f, 1024.0f);
+
+	ImGui::SetNextItemWidth(100.0f);
+	ImGui::DragFloat("Move step", &m_moveStep, 1.0f, 1.0f, 1024.0f);
+
+	ImGui::SetNextItemWidth(100.0f);
+	ImGui::DragFloat("Rotate step", &m_rotateStep, 1.0f, 1.0f, 90.0f);
+
+	ImGui::Separator();
+
+	if (m_mode == AuraPointMode::CTF)
+	{
+		const char* classnames[] =
+		{
+			"item_flag_team1",
+			"item_flag_team2",
+			"info_player_team1",
+			"info_player_team2"
+		};
+
+		int current = 0;
+
+		for (int i = 0; i < 4; ++i)
+		{
+			if (m_newClassname == classnames[i])
+			{
+				current = i;
+				break;
+			}
+		}
+
+		if (ImGui::Combo("New point type", &current, classnames, 4))
+			m_newClassname = classnames[current];
+	}
+	else if (m_mode == AuraPointMode::DOM)
+	{
+		ImGui::InputText("New control point name", &m_newDomName);
 	}
 
 	ImGui::Separator();
@@ -536,6 +594,15 @@ void AuraPointModeEditor::DrawGui()
 		if (m_mode == AuraPointMode::DOM)
 			ImGui::Text("Export data1: %s", point.data1.c_str());
 	}
+
+	ImGui::Separator();
+	ImGui::TextUnformatted("Controls:");
+	ImGui::TextUnformatted("Ctrl + LMB: place new point on map geometry");
+	ImGui::TextUnformatted("LMB: select point marker");
+	ImGui::TextUnformatted("Arrow keys: move selected X/Y");
+	ImGui::TextUnformatted("Page Up / Page Down: move selected Z");
+	ImGui::TextUnformatted("Q / E: rotate selected yaw");
+	ImGui::TextUnformatted("Delete: delete selected point");
 
 	ImGui::End();
 }
@@ -679,5 +746,225 @@ void AuraPointModeEditor::DrawLabels()
 			color,
 			text
 		);
+	}
+}
+
+float AuraPointModeEditor::SnapFloat(float value) const
+{
+	if (!m_snapEnabled || m_snapGrid <= 0.0f)
+		return value;
+
+	return roundf(value / m_snapGrid) * m_snapGrid;
+}
+
+vec3 AuraPointModeEditor::SnapVec(const vec3& v) const
+{
+	return vec3(SnapFloat(v.x), SnapFloat(v.y), SnapFloat(v.z));
+}
+
+void AuraPointModeEditor::SnapPoint(AuraModePoint& point)
+{
+	point.origin = SnapVec(point.origin);
+}
+
+bool AuraPointModeEditor::TraceCursorToWorld(vec3& outPos)
+{
+	if (!m_renderer)
+		return false;
+
+	Bsp* map = m_renderer->getSelectedMap();
+
+	if (!map || !map->bsp_valid || !map->getBspRender())
+		return false;
+
+	vec3 start;
+	vec3 dir;
+	m_renderer->getPickRay(start, dir);
+
+	PickInfo pickInfo;
+	pickInfo.bestDist = g_limits.fltMaxCoord * 2.0f + 1.0f;
+
+	Bsp* pickedMap = map;
+
+	if (!map->getBspRender()->pickPoly(start, dir, -1, pickInfo, &pickedMap))
+		return false;
+
+	outPos = start + dir * pickInfo.bestDist;
+	return true;
+}
+
+void AuraPointModeEditor::PlacePointAtCursor()
+{
+	if (!m_enabled || m_mode == AuraPointMode::None)
+		return;
+
+	vec3 hit;
+
+	if (!TraceCursorToWorld(hit))
+		return;
+
+	hit.z += 1.0f;
+
+	AuraModePoint point;
+
+	if (m_mode == AuraPointMode::CTF)
+	{
+		point.classname = m_newClassname.empty() ? GetDefaultClassname() : m_newClassname;
+	}
+	else if (m_mode == AuraPointMode::DOM)
+	{
+		point.classname = "item_dom_controlpoint";
+		point.data1 = m_newDomName.empty() ? "ControlPoint" : m_newDomName;
+	}
+
+	point.origin = hit;
+	point.angles = vec3();
+
+	SanitizePoint(point);
+	SnapPoint(point);
+
+	m_points.push_back(point);
+	m_selectedPoint = (int)m_points.size() - 1;
+}
+
+void AuraPointModeEditor::SelectPointUnderCursor()
+{
+	if (!m_renderer)
+		return;
+
+	vec3 start;
+	vec3 dir;
+	m_renderer->getPickRay(start, dir);
+
+	float bestDist = FLT_MAX;
+	int bestPoint = -1;
+
+	for (int i = 0; i < (int)m_points.size(); ++i)
+	{
+		const AuraModePoint& point = m_points[i];
+
+		vec3 mins = point.origin + vec3(-16.0f, -16.0f, 0.0f);
+		vec3 maxs = point.origin + vec3(16.0f, 16.0f, 56.0f);
+
+		// make flags easier to select
+		if (point.classname == "item_flag_team1" || point.classname == "item_flag_team2" || point.classname == "item_dom_controlpoint")
+			maxs.z = point.origin.z + 96.0f;
+
+		float dist = bestDist;
+
+		if (pickAABB(start, dir, mins, maxs, dist))
+		{
+			bestDist = dist;
+			bestPoint = i;
+		}
+	}
+
+	m_selectedPoint = bestPoint;
+}
+
+void AuraPointModeEditor::MoveSelectedPoint(const vec3& delta)
+{
+	if (m_selectedPoint < 0 || m_selectedPoint >= (int)m_points.size())
+		return;
+
+	AuraModePoint& point = m_points[m_selectedPoint];
+
+	point.origin += delta;
+	SnapPoint(point);
+}
+
+void AuraPointModeEditor::RotateSelectedPoint(float yawDelta)
+{
+	if (m_selectedPoint < 0 || m_selectedPoint >= (int)m_points.size())
+		return;
+
+	AuraModePoint& point = m_points[m_selectedPoint];
+
+	// Aura-SE file format is angleX angleY angleZ.
+	// Yaw is normally angleY in HL-style entity angles.
+	point.angles.y += yawDelta;
+
+	while (point.angles.y < 0.0f)
+		point.angles.y += 360.0f;
+
+	while (point.angles.y >= 360.0f)
+		point.angles.y -= 360.0f;
+}
+
+void AuraPointModeEditor::Controls()
+{
+	if (!m_enabled || m_mode == AuraPointMode::None)
+		return;
+
+	if (!m_renderer || !m_renderer->canControl)
+		return;
+
+	const bool ctrlDown =
+		m_renderer->pressed[GLFW_KEY_LEFT_CONTROL] ||
+		m_renderer->pressed[GLFW_KEY_RIGHT_CONTROL];
+
+	const bool lmbPressed =
+		m_renderer->curLeftMouse == GLFW_PRESS &&
+		m_renderer->oldLeftMouse != GLFW_PRESS;
+
+	if (ctrlDown && lmbPressed)
+	{
+		PlacePointAtCursor();
+		return;
+	}
+
+	if (!ctrlDown && lmbPressed)
+	{
+		SelectPointUnderCursor();
+		return;
+	}
+
+	if (m_renderer->pressed[GLFW_KEY_DELETE] && !m_renderer->oldPressed[GLFW_KEY_DELETE])
+	{
+		DeleteSelectedPoint();
+		return;
+	}
+
+	if (m_selectedPoint < 0 || m_selectedPoint >= (int)m_points.size())
+		return;
+
+	const float step = m_snapEnabled ? m_snapGrid : m_moveStep;
+
+	vec3 moveDelta;
+
+	if (m_renderer->pressed[GLFW_KEY_LEFT] && !m_renderer->oldPressed[GLFW_KEY_LEFT])
+		moveDelta.x -= step;
+
+	if (m_renderer->pressed[GLFW_KEY_RIGHT] && !m_renderer->oldPressed[GLFW_KEY_RIGHT])
+		moveDelta.x += step;
+
+	if (m_renderer->pressed[GLFW_KEY_DOWN] && !m_renderer->oldPressed[GLFW_KEY_DOWN])
+		moveDelta.y -= step;
+
+	if (m_renderer->pressed[GLFW_KEY_UP] && !m_renderer->oldPressed[GLFW_KEY_UP])
+		moveDelta.y += step;
+
+	if (m_renderer->pressed[GLFW_KEY_PAGE_DOWN] && !m_renderer->oldPressed[GLFW_KEY_PAGE_DOWN])
+		moveDelta.z -= step;
+
+	if (m_renderer->pressed[GLFW_KEY_PAGE_UP] && !m_renderer->oldPressed[GLFW_KEY_PAGE_UP])
+		moveDelta.z += step;
+
+	if (moveDelta.x != 0.0f || moveDelta.y != 0.0f || moveDelta.z != 0.0f)
+	{
+		MoveSelectedPoint(moveDelta);
+		return;
+	}
+
+	if (m_renderer->pressed[GLFW_KEY_Q] && !m_renderer->oldPressed[GLFW_KEY_Q])
+	{
+		RotateSelectedPoint(-m_rotateStep);
+		return;
+	}
+
+	if (m_renderer->pressed[GLFW_KEY_E] && !m_renderer->oldPressed[GLFW_KEY_E])
+	{
+		RotateSelectedPoint(m_rotateStep);
+		return;
 	}
 }
