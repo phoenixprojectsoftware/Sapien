@@ -17,6 +17,7 @@
 
 class Gui;
 class KothEditor;
+class AuraPointModeEditor;
 
 enum transform_modes
 {
@@ -135,6 +136,7 @@ public:
 
 	Gui* gui;
 	KothEditor* kothEditor = nullptr;
+	AuraPointModeEditor* auraPointEditor = nullptr;
 
 	GLFWwindow* window;
 

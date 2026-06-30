@@ -2,6 +2,7 @@
 #include "Gui.h"
 #include "Renderer.h"
 #include "KothEditor.h"
+#include "AuraPointModeEditor.h"
 #include "ShaderProgram.h"
 #include "primitives.h"
 #include "VertexBuffer.h"
@@ -338,6 +339,9 @@ void Gui::draw()
 	{
 		app->kothEditor->DrawGui();
 	}
+
+	if (app->auraPointEditor)
+		app->auraPointEditor->DrawGui();
 
 	app->anyPopupOpened = imgui_io->WantCaptureMouse;
 
@@ -4598,6 +4602,30 @@ void Gui::drawMenuBar()
 						app->kothEditor->ToggleEnabled();
 				}
 				IMGUI_TOOLTIP(g, "EDIT CROSS PRODUCT .koth FILES VISUALLY.");
+
+				if (ImGui::MenuItem(
+					"CAPTURE THE FLAG EDIT",
+					0,
+					app->auraPointEditor && app->auraPointEditor->IsModeEnabled(AuraPointMode::CTF),
+					app->getSelectedMap() && !app->isLoading))
+				{
+					if (app->auraPointEditor)
+						app->auraPointEditor->ToggleMode(AuraPointMode::CTF);
+				}
+
+				IMGUI_TOOLTIP(g, "EDIT CROSS PRODUCT .ctf FILES VISUALLY.");
+
+				if (ImGui::MenuItem(
+					"DOMINATION EDIT",
+					0,
+					app->auraPointEditor && app->auraPointEditor->IsModeEnabled(AuraPointMode::DOM),
+					app->getSelectedMap() && !app->isLoading))
+				{
+					if (app->auraPointEditor)
+						app->auraPointEditor->ToggleMode(AuraPointMode::DOM);
+				}
+
+				IMGUI_TOOLTIP(g, "EDIT CROSS PRODUCT .dom FILES VISUALLY.");
 				ImGui::EndMenu();
 			}
 
@@ -9145,7 +9173,7 @@ void Gui::loadFonts()
 		if (entry.is_regular_file()) {
 			auto extension = entry.path().extension().string();
 			extension = toLowerCase(extension);
-			if (extension == ".ttf" || extension == ".ttc") {
+			if (extension == ".ttf" || extension == ".ttc" || extension == ".otf") {
 				fontFiles.emplace_back(entry.path().string());
 			}
 		}

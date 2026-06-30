@@ -220,6 +220,9 @@
     <ClCompile Include="..\src\editor\KothEditor.cpp">
       <Filter>Source Files\editor</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\editor\AuraPointModeEditor.cpp">
+      <Filter>Source Files\editor</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include=".\..\src\cli\CommandLine.h">
@@ -392,6 +395,9 @@
     </ClInclude>
     <ClInclude Include="resource.h" />
     <ClInclude Include="..\src\editor\KothEditor.h">
+      <Filter>Header Files\editor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\AuraPointModeEditor.h">
       <Filter>Header Files\editor</Filter>
     </ClInclude>
   </ItemGroup>

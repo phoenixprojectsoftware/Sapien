@@ -6,6 +6,7 @@
 #include "shaders.h"
 #include "Gui.h"
 #include "KothEditor.h"
+#include "AuraPointModeEditor.h"
 #include "filedialog/ImFileDialog.h"
 #include "lodepng.h"
 #include "util.h"
@@ -194,6 +195,7 @@ Renderer::Renderer()
 
 	gui = new Gui(this);
 	kothEditor = new KothEditor(this);
+	auraPointEditor = new AuraPointModeEditor(this);
 
 	loadGuiSettings();
 
@@ -396,6 +398,8 @@ Renderer::~Renderer()
 	print_log(get_localized_string(LANG_0901));
 	delete kothEditor;
 	kothEditor = nullptr;
+	delete auraPointEditor;
+	auraPointEditor = nullptr;
 	glfwTerminate();
 }
 
@@ -3059,6 +3063,9 @@ void Renderer::selectMap(Bsp* map)
 	AS_OnMapChange();
 	if (kothEditor)
 		kothEditor->OnMapChanged(map);
+
+	if (auraPointEditor)
+		auraPointEditor->OnMapChanged(map);
 }
 
 void Renderer::deselectMap()
